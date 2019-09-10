@@ -11,6 +11,7 @@
 
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
+int findAddress(char *,char *);
 
 int
 main(int argc, char *argv[])
@@ -39,10 +40,10 @@ main(int argc, char *argv[])
         printf("error in opening %s\n", outFileString);
         exit(1);
     }
-    //first pass: find labels and store address
-    int addy[MAXLINELENGTH];
+   
+    char *addy[MAXLINELENGTH];
     int i = 0;
-
+    //first pass: find labels and store address
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
 
         if (label[0] != '\0') {
@@ -60,68 +61,189 @@ main(int argc, char *argv[])
     //second pass - output ISA as decimal
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
         //the first 8 bits are always zeros
-        char *binary[MAXLINELENGTH];
+        int result;
 
         //label
         //instruction
         if (!strcmp(opcode, "add")) {
-            char *op_b[MAXLINELENGTH] = "000";
+            result = 0b000;
 
-            strcat(binary,op_b);
-            printf("add: %s",binary);
+
+            printf("add: %i",result);
+
+            //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            //bits 15-3 are unused
+            result = result << 13;
+
+            //dest - bits 2-0
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
         }
         else if (!strcmp(opcode, "nor")) {
-            char *op_b[MAXLINELENGTH] = "001";
+            result = 0b001;
+            printf("nor: %i",result);
 
-            strcat(binary,op_b);
-            printf("nor: %s",binary);
+             //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            //bits 15-3 are unused
+            result = result << 13;
+
+            //dest - bits 2-0
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
         }
         else if (!strcmp(opcode, "lw")) {
-            char *op_b[MAXLINELENGTH] = "010";
+            result = 0b010;
+            printf("lw: %i",result);
 
-            strcat(binary,op_b);
-            printf("lw: %s",binary);
+             //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            result = result << 16;
+
+            //check for label
+            if (arg2[0] > '9') {
+                int address = findAddress(addy,arg2);
+                if (address > -1) {
+                    result = result | address;
+                    printf("result = %i", result);
+                }
+            }
+            else {
+                result = result | atoi(arg2);
+                printf("result = %i", result);
+            }
+
         }
         else if (!strcmp(opcode, "sw")) {
-            char *op_b[MAXLINELENGTH] = "011";
+            result = 0b011;
+            printf("sw: %i",result);
 
-            strcat(binary,op_b);
-            printf("sw: %s",binary);
+            //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            result = result << 16;
+
+            //check for label
+            if (arg2[0] > '9') {
+                int address = findAddress(addy,arg2);
+                if (address > -1) {
+                    result = result | address;
+                    printf("result = %i", result);
+                }
+            }
+            else {
+                result = result | atoi(arg2);
+                printf("result = %i", result);
+            }
         }
         else if (!strcmp(opcode, "beq")) {
-            char *op_b[MAXLINELENGTH] = "100";
+            result = 0b100;
+            printf("beq: %i",result);
 
-            strcat(binary,op_b);
-            printf("beq: %s",binary);
+            //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            result = result << 16;
+
+            //check for label
+            if (arg2[0] > '9') {
+                int address = findAddress(addy,arg2);
+                if (address > -1) {
+                    result = result | address;
+                    printf("result = %i", result);
+                }
+            }
+            else {
+                result = result | atoi(arg2);
+                printf("result = %i", result);
+            }
         }
         else if (!strcmp(opcode, "jair")) {
-            char *op_b[MAXLINELENGTH] = "101";
+            result = 0b101;
+            printf("jair: %i",result);
 
-            strcat(binary,op_b);
-            printf("jair: %s",binary);
+            //reg A - bits 21-19
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+        
+            //reg B - bits 18-16
+            result = (result << 3) | atoi(arg0);
+            printf("current result: %i", result);
+
+            //bits 15-0 are unused
+            result = result << 16;
         }
         else if (!strcmp(opcode, "halt")) {
-            char *op_b[MAXLINELENGTH] = "110";
+            result = 0b110;
+            printf("halt: %i",result);
 
-            strcat(binary,op_b);
-            printf("halt: %s",binary);
+            //bits 21-0 are unused
+            result = result << 22;
         }
         else if (!strcmp(opcode, "noop")) {
-            char *op_b[MAXLINELENGTH] = "111";
+            result = 0b111;
+            printf("noop: %i",result);
 
-            strcat(binary,op_b);
-            printf("noop: %s",binary);
+            //bits 21-0 are unused
+            result = result << 22;
         }
         else {
             printf("opcode not found");
         }
-        //field0
+
+      
+        
         //field1
         //field2
 
     }
 
     return(0);
+}
+
+//searches an array of strings for the location of given label.
+//if the array contains the label, returns the location of the label.
+//if not returns -1;
+int findAddress(char *arrOfStr, char *label) {
+    for (int i = 0; i < MAXLINELENGTH; ++i){
+        if (strcmp(arrOfStr[i],label) {
+            //return location of label
+            printf("found label at element: %i", i);
+            return i;
+        }
+    }
+    printf("label: %s not found",label);
+    return -1;
 }
 
 /*
