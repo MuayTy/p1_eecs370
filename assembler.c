@@ -8,10 +8,18 @@
 #include <string.h>
 
 #define MAXLINELENGTH 1000
+#define MAXLINES 65536
+
+struct Label_Map {
+    char *word[7];
+    int address;
+};
 
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
-int findAddress(char *,char *);
+int findAddress( Label_Map,char *);
+
+
 
 int
 main(int argc, char *argv[])
@@ -41,17 +49,42 @@ main(int argc, char *argv[])
         exit(1);
     }
    
-    char *addy[MAXLINELENGTH];
-    int i = 0;
+    Label_Map arr[MAXLINES];
+    int amountOfLabels = 0;
+    int currentAd = 0;
     //first pass: find labels and store address
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
 
         if (label[0] != '\0') {
-            printf("label = %s\n",label);
-            strcpy(addy[i],label);
-            printf("copy = %s at address %i\n",addy[i],i);
+            //check size
+            if ((label[0] > 'A') || (label[0] < 'a' && label[0] > 'Z') || (label[0] > 'z')) {
+                printf("label does not start with a letter. : %c\n",label[0]);
+                exit(1);
+            }
+            //check if label starts with a letter
+            if (strlen(label) > 6) {
+                printf("label: %s is too long.\n", label);
+                exit(1);
+            }
+            //check for duplicates
+            for (int i = 0; i < amountOfLabels; ++i) {
+                if (!strcmp(arr[i].word,label)){
+                    printf("label: %s already exists.\n",label);
+                    exit(1);
+                }
+            }
+
+            printf("label = %s\n",label); 
+            //fill struct with data
+            Label_Map m; 
+            strcpy(m.word,label);
+            m.address = currentAd;
+            //store in arr
+            arr[amountOfLabels] = m;
+            printf("copy = %s at address %i\n",m.word,m.address);
+            ++amountOfLabels;
         }
-        ++i;
+        ++currentAd;
     }
 
     /* this is how to rewind the file ptr so that you start reading from the
@@ -122,7 +155,7 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(addy,arg2);
+                int address = findAddress(arr,arg2);
                 if (address > -1) {
                     result = result | address;
                     printf("result = %i", result);
@@ -150,7 +183,7 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(addy,arg2);
+                int address = findAddress(arr,arg2);
                 if (address > -1) {
                     result = result | address;
                     printf("result = %i", result);
@@ -177,15 +210,28 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(addy,arg2);
+                int address = findAddress(arr,arg2);
                 if (address > -1) {
-                    result = result | address;
+                    result = (result << 16) | address;
                     printf("result = %i", result);
                 }
             }
             else {
-                result = result | atoi(arg2);
-                printf("result = %i", result);
+                //2's complement
+                //1111 1111 1111 1111 1000 0000 0000 0001
+                if (arg2[0] < 0) {
+                    //shift left to remove first (31-16 bits)
+                    int neg = (atoi(arg2) << 16);
+                    //shift back right to create all 0's, 
+                    neg = neg >> 16;
+                    result = result | neg;
+                    printf("result = %i", result);
+                }
+                else {
+                    result = result << 16 | atoi(arg2);
+                    printf("result = %i", result);
+                }
+                
             }
         }
         else if (!strcmp(opcode, "jair")) {
@@ -218,28 +264,36 @@ main(int argc, char *argv[])
             result = result << 22;
         }
         else {
-            printf("opcode not found");
+            if (arg0[0] != '\0') {
+                //label
+                if (arg0[0] > '9') {
+                    int address = findAddress(arr,arg2);
+                    if (address > -1) {
+                        result = address;
+                        printf("result = %i", result);
+                    }
+                }
+                else {
+                    result = atoi(arg0);
+                }
+            }
+        
         }
 
-      
-        
-        //field1
-        //field2
-
-    }
-
+        fprintf(outFilePtr,"%i\n",result);
+    } 
     return(0);
 }
 
 //searches an array of strings for the location of given label.
 //if the array contains the label, returns the location of the label.
 //if not returns -1;
-int findAddress(char *arrOfStr, char *label) {
-    for (int i = 0; i < MAXLINELENGTH; ++i){
-        if (strcmp(arrOfStr[i],label) {
+int findAddress(Label_Map arr[], char *label) {
+    for (int i = 0; i < MAXLINES; ++i){
+        if (strcmp(arr[i],label)) {
             //return location of label
             printf("found label at element: %i", i);
-            return i;
+            return arr[i].address;
         }
     }
     printf("label: %s not found",label);
