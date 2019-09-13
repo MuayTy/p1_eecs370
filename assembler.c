@@ -12,12 +12,11 @@
 
 struct Label_Map {
     char *word[7];
-    int address;
+    int ad;
 };
 
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
-int findAddress( Label_Map,char *);
 
 
 
@@ -49,7 +48,7 @@ main(int argc, char *argv[])
         exit(1);
     }
    
-    Label_Map arr[MAXLINES];
+    struct Label_Map arr[MAXLINES];
     int amountOfLabels = 0;
     int currentAd = 0;
     //first pass: find labels and store address
@@ -68,7 +67,7 @@ main(int argc, char *argv[])
             }
             //check for duplicates
             for (int i = 0; i < amountOfLabels; ++i) {
-                if (!strcmp(arr[i].word,label)){
+                if (!strcmp(*arr[i].word,label)){
                     printf("label: %s already exists.\n",label);
                     exit(1);
                 }
@@ -76,12 +75,10 @@ main(int argc, char *argv[])
 
             printf("label = %s\n",label); 
             //fill struct with data
-            Label_Map m; 
-            strcpy(m.word,label);
-            m.address = currentAd;
-            //store in arr
-            arr[amountOfLabels] = m;
-            printf("copy = %s at address %i\n",m.word,m.address);
+    
+            strcpy(*arr[amountOfLabels].word,label);   
+            arr[amountOfLabels].ad = currentAd;
+            //printf("copy = %s at address %i\n",*arr[amountOfLabels].word,*arr[amountOfLabels].ad);
             ++amountOfLabels;
         }
         ++currentAd;
@@ -155,17 +152,22 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(arr,arg2);
-                if (address > -1) {
-                    result = result | address;
-                    printf("result = %i", result);
-                }
+                int address = -1;
+                    for (int i = 0; i < MAXLINES; ++i){
+                        if (strcmp(*arr[i].word,label)) {
+                            printf("found label at element: %i", i);
+                            address = arr[i].ad;
+                        }
+                    }
+                    if (address > -1) {
+                        result = address;
+                        printf("result = %i", result);
+                    }
             }
             else {
                 result = result | atoi(arg2);
                 printf("result = %i", result);
-            }
-
+            }         
         }
         else if (!strcmp(opcode, "sw")) {
             result = 0b011;
@@ -183,12 +185,18 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(arr,arg2);
-                if (address > -1) {
-                    result = result | address;
-                    printf("result = %i", result);
-                }
-            }
+                int address = -1;
+                    for (int i = 0; i < MAXLINES; ++i){
+                        if (strcmp(*arr[i].word,label)) {
+                            printf("found label at element: %i", i);
+                            address = arr[i].ad;
+                        }
+                    }
+                    if (address > -1) {
+                        result = address;
+                        printf("result = %i", result);
+                    }
+            } 
             else {
                 result = result | atoi(arg2);
                 printf("result = %i", result);
@@ -210,12 +218,18 @@ main(int argc, char *argv[])
 
             //check for label
             if (arg2[0] > '9') {
-                int address = findAddress(arr,arg2);
-                if (address > -1) {
-                    result = (result << 16) | address;
-                    printf("result = %i", result);
-                }
-            }
+                int address = -1;
+                    for (int i = 0; i < MAXLINES; ++i){
+                        if (strcmp(*arr[i].word,label)) {
+                            printf("found label at element: %i", i);
+                            address = arr[i].ad;
+                        }
+                    }
+                    if (address > -1) {
+                        result = address;
+                        printf("result = %i", result);
+                    }
+            } 
             else {
                 //2's complement
                 //1111 1111 1111 1111 1000 0000 0000 0001
@@ -267,7 +281,13 @@ main(int argc, char *argv[])
             if (arg0[0] != '\0') {
                 //label
                 if (arg0[0] > '9') {
-                    int address = findAddress(arr,arg2);
+                    int address = -1;
+                    for (int i = 0; i < MAXLINES; ++i){
+                        if (strcmp(*arr[i].word,label)) {
+                            printf("found label at element: %i", i);
+                            address = arr[i].ad;
+                        }
+                    }
                     if (address > -1) {
                         result = address;
                         printf("result = %i", result);
@@ -283,21 +303,6 @@ main(int argc, char *argv[])
         fprintf(outFilePtr,"%i\n",result);
     } 
     return(0);
-}
-
-//searches an array of strings for the location of given label.
-//if the array contains the label, returns the location of the label.
-//if not returns -1;
-int findAddress(Label_Map arr[], char *label) {
-    for (int i = 0; i < MAXLINES; ++i){
-        if (strcmp(arr[i],label)) {
-            //return location of label
-            printf("found label at element: %i", i);
-            return arr[i].address;
-        }
-    }
-    printf("label: %s not found",label);
-    return -1;
 }
 
 /*
