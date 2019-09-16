@@ -173,12 +173,24 @@ main(int argc, char *argv[])
                     }
                     if (address > -1) {
                         result = (result << 16) | address;
-                        printf("result = %i\n", result);
+                        printf("result from lw no label = %i\n", result);
                     }
             }
             else {
-                result = (result << 16) | atoi(arg2);
-                printf("result = %i\n", result);
+                //deals with negatives
+               if (atoi(arg2) < 0) {
+                    unsigned int temp = atoi(arg2);
+                    temp = temp << 16; 
+                    printf("offset = %i\n",temp);
+                    temp = temp >> 16; 
+                    printf("offset = %i\n",temp);
+                    result = (result << 16) | temp;
+                    printf("result = %i\n", result);
+                }
+                else {
+                    result = (result << 16) | atoi(arg2);
+                    printf("result = %i\n", result);
+                }
             }         
         }
         else if (!strcmp(opcode, "sw")) {
@@ -206,13 +218,26 @@ main(int argc, char *argv[])
                         }
                     }
                     if (address > -1) {
-                        result = address;
+                        result = (result << 16) | address;
                         printf("result = %i\n", result);
                     }
             } 
             else {
-                result = result | atoi(arg2);
-                printf("result = %i\n", result);
+                //deal with negatives
+                if (atoi(arg2) < 0) {
+                    unsigned int temp = atoi(arg2);
+                    temp = temp << 16; 
+                    printf("offset = %i\n",temp);
+                    temp = temp >> 16; 
+                    printf("offset = %i\n",temp);
+                    result = (result << 16) | temp;
+                    printf("result = %i\n", result);
+                }
+                else {
+                    result = (result << 16) | atoi(arg2);
+                    printf("result = %i\n", result);
+                }
+                
             }
         }
         else if (!strcmp(opcode, "beq")) {
@@ -245,10 +270,23 @@ main(int argc, char *argv[])
                         int offset = address - pc - 1;
                         printf("offset = %i\n",offset);
 
-                        offset = offset >> 16; 
-                        printf("offset = %i\n",offset);
-                        result = (result << 16) | offset;
-                        printf("result = %i\n", result);
+                        //fix two's complement
+                        if (offset < 0) {
+                            unsigned int temp = address - pc - 1;
+                            temp = temp << 16; 
+                            printf("offset = %i\n",temp);
+                            temp = temp >> 16; 
+                            printf("offset = %i\n",temp);
+                            result = (result << 16) | temp;
+                            printf("result = %i\n", result);
+                        }
+                        else {
+                            result = (result << 16) | offset;
+                            printf("result = %i\n", result);
+                        }
+
+                        
+                        
                     }
                 }
                 else {
@@ -257,14 +295,18 @@ main(int argc, char *argv[])
                         int neg = atoi(arg2);
                         int offset = neg - pc - 1;
                     if (offset < 0) {
-                        //shift left to remove first (31-16 bits)
-                        offset = offset << 16;
-                        //shift back right to create all 0's, 
-                        offset = offset >> 16;                 
-                    }  
-
-                    result = (result << 16) | offset;
-                    printf("result = %i\n", result);
+                        unsigned int temp = neg - pc - 1;
+                            temp = temp << 16; 
+                            printf("offset = %i\n",temp);
+                            temp = temp >> 16; 
+                            printf("offset = %i\n",temp);
+                            result = (result << 16) | temp;
+                            printf("result = %i\n", result);
+                    }
+                    else {
+                            result = (result << 16) | offset;
+                            printf("result = %i\n", result);
+                    }
                                    
                 }
             }
