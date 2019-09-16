@@ -241,14 +241,12 @@ main(int argc, char *argv[])
                         }
                     }
                     if (address > -1) {
+                        printf("pc = %i\n",pc);
                         int offset = address - pc - 1;
+                        printf("offset = %i\n",offset);
 
-                        if (offset < 0) {
-                            //shift left to remove first (31-16 bits)
-                            offset = offset << 16;
-                            //shift back right to create all 0's, 
-                            //offset = offset >> 16;                 
-                        }
+                        offset = offset >> 16; 
+                        printf("offset = %i\n",offset);
                         result = (result << 16) | offset;
                         printf("result = %i\n", result);
                     }
@@ -340,8 +338,8 @@ main(int argc, char *argv[])
                 if (arg0[0] > '9') {
                     int address = -1;
                     for (int i = 0; i < MAXLINES; ++i){
-                        if (!strcmp(maps[i].word,label)) {
-                            printf("found label: %s at element: %i\n",label, i);
+                        if (!strcmp(maps[i].word,arg0)) {
+                            printf("found label: %s at element: %i\n",arg0, i);
                             address = maps[i].ad;
                             break;
                         }
