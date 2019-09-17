@@ -104,28 +104,56 @@ main(int argc, char *argv[])
         beginning of the file */
     rewind(inFilePtr);
     int pc = 0;
-    int undefLabel = 1;
+    
     //second pass - output ISA as decimal
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
         //the first 8 bits are always zeros
         int result;
-        
+        int undefLabel = 1;
         
         //check for undefined labels
-            for (int i = 0; i < amountOfLabels; ++i) {
-                if (!strcmp(maps[i].word,arg2)) {
-                    printf("found label: %s continuing ...\n",arg2);
-                    undefLabel = 0;
+
+        if (!strcmp(opcode, "beq") || !strcmp(opcode, "lw") || !strcmp(opcode, "sw")) { 
+            if (arg2[0] > '9') {
+
+                printf("validating label in arg2...\n");
+
+                for (int i = 0; i < amountOfLabels; ++i) {
+                    
+                    if (!strcmp(maps[i].word,arg2)) {
+                        printf("found label: %s continuing ...\n",arg2);
+                        undefLabel = 0;
+                    }
+                }
+
+                if (undefLabel) {
+                    printf("label: %s not found, exiting...\n", arg2);
+                    exit(1);
+                }    
+            }
+        }
+        
+        if (!strcmp(opcode, ".fill")) {
+            if (arg0[0] > '9') {
+                printf("validating label in arg0...\n");
+                for (int i = 0; i < amountOfLabels; ++i) {
+                    
+
+                    if (!strcmp(maps[i].word,arg0)) {
+                        printf("found label: %s continuing ...\n",arg0);
+                        undefLabel = 0;
+                    }
+                }
+
+                if (undefLabel) {
+                    printf("label: %s not found, exiting...\n", arg0);
+                    exit(1);
                 }
             }
-
-            if (undefLabel) {
-                exit(1);
-            }
+        }
+        
 
 
-        //label
-        //instruction
         if (!strcmp(opcode, "add")) {
             result = 0b000;
 
@@ -157,14 +185,14 @@ main(int argc, char *argv[])
             printf("current result: %i\n", result);
         
             //reg B - bits 18-16
-            result = (result << 3) | atoi(arg0);
+            result = (result << 3) | atoi(arg1);
             printf("current result: %i\n", result);
 
             //bits 15-3 are unused
             result = result << 13;
 
             //dest - bits 2-0
-            result = (result << 3) | atoi(arg0);
+            result = (result << 3) | atoi(arg2);
             printf("current result: %i\n", result);
         }
         else if (!strcmp(opcode, "lw")) {
@@ -183,7 +211,7 @@ main(int argc, char *argv[])
             //check for label
             if (arg2[0] > '9') {
                 int address = -1;
-                    for (int i = 0; i < MAXLINES; ++i){
+                    for (int i = 0; i < amountOfLabels; ++i){
                         printf("map {%s , %i}\n",maps[i].word,maps[i].ad);
                         if (!strcmp(maps[i].word,arg2)) {
                             printf("found label: %s at address: %i\n",arg2, maps[i].ad);
@@ -222,17 +250,15 @@ main(int argc, char *argv[])
             printf("current result: %i\n", result);
         
             //reg B - bits 18-16
-            result = (result << 3) | atoi(arg0);
+            result = (result << 3) | atoi(arg1);
             printf("current result: %i\n", result);
-
-            result = result << 16;
 
             //check for label
             if (arg2[0] > '9') {
                 int address = -1;
-                    for (int i = 0; i < MAXLINES; ++i){
-                        if (!strcmp(maps[i].word,label)) {
-                            printf("found label: %s at element: %i\n",label, i);
+                    for (int i = 0; i < amountOfLabels; ++i){
+                        if (!strcmp(maps[i].word,arg2)) {
+                            printf("found label: %s at element: %i\n",arg2, maps[i].ad);
                             address = maps[i].ad;
                             break;
                         }
@@ -266,103 +292,63 @@ main(int argc, char *argv[])
 
             //reg A - bits 21-19
             result = (result << 3) | atoi(arg0);
-            printf("current result: %i\n", result);
+            printf("Reg A - current result: %i\n", result);
         
             //reg B - bits 18-16
             result = (result << 3) | atoi(arg1);
-            printf("current result: %i\n", result);
+            printf("Reg B - current result: %i\n", result);
 
-            //reg a and reg b are the same
-            if (atoi(arg1) == atoi(arg2)) {
-                //check for label
-                if (arg2[0] > '9') {
-                    int address = -1;
-                    for (int i = 0; i < MAXLINES; ++i){
-                        printf("map {%s , %i}\n",maps[i].word,maps[i].ad);
-                        if (!strcmp(maps[i].word,arg2)) {
-                            printf("found label: %s at address: %i\n",arg2, maps[i].ad);
-                            address = maps[i].ad;
-                            break;
-                        }
-                    }
-                    if (address > -1) {
-                        printf("pc = %i\n",pc);
-                        int offset = address - pc - 1;
-                        printf("offset = %i\n",offset);
-
-                        //fix two's complement
-                        if (offset < 0) {
-                            unsigned int temp = address - pc - 1;
-                            temp = temp << 16; 
-                            printf("offset = %i\n",temp);
-                            temp = temp >> 16; 
-                            printf("offset = %i\n",temp);
-                            result = (result << 16) | temp;
-                            printf("result = %i\n", result);
-                        }
-                        else {
-                            result = (result << 16) | offset;
-                            printf("result = %i\n", result);
-                        }
-
-                        
-                        
+            //check for label
+            if (arg2[0] > '9') {
+                int address = -1;
+                for (int i = 0; i < amountOfLabels; ++i){
+                    printf("map {%s , %i}\n",maps[i].word,maps[i].ad);
+                    if (!strcmp(maps[i].word,arg2)) {
+                        printf("found label: %s at address: %i\n",arg2, maps[i].ad);
+                        address = maps[i].ad;
+                        break;
                     }
                 }
-                else {
-                    //2's complement
-                    //1111 1111 1111 1111 1000 0000 0000 0001
-                        int neg = atoi(arg2);
-                        int offset = neg - pc - 1;
+                if (address > -1) {
+                    printf("pc = %i\n",pc);
+                    int offset = address - pc - 1;
+                    printf("offset = %i\n",offset);
+
+                    //fix two's complement
                     if (offset < 0) {
-                        unsigned int temp = neg - pc - 1;
-                            temp = temp << 16; 
-                            printf("offset = %i\n",temp);
-                            temp = temp >> 16; 
-                            printf("offset = %i\n",temp);
-                            result = (result << 16) | temp;
-                            printf("result = %i\n", result);
+                        unsigned int temp = address - pc - 1;
+                        temp = temp << 16; 
+                        printf("offset = %i\n",temp);
+                        temp = temp >> 16; 
+                        printf("offset = %i\n",temp);
+                        result = (result << 16) | temp;
+                        printf("result = %i\n", result);
                     }
                     else {
-                            result = (result << 16) | offset;
-                            printf("result = %i\n", result);
-                    }
-                                   
+                        result = (result << 16) | offset;
+                        printf("result = %i\n", result);
+                    }                                 
                 }
             }
             else {
-                    //check for label
-                if (arg2[0] > '9') {
-                    int address = -1;
-                        for (int i = 0; i < MAXLINES; ++i){
-                            printf("map {%s , %i}\n",maps[i].word,maps[i].ad);
-                            if (!strcmp(maps[i].word,arg2)) {
-                                printf("found label: %s at address: %i\n",arg2, maps[i].ad);
-                                address = maps[i].ad;
-                                break;
-                            }
-                        }
-                        if (address > -1) {
-                            result = (result << 16) | address;
-                            printf("result = %i\n", result);
-                        }
-                } 
+                //2's complement
+                //1111 1111 1111 1111 1000 0000 0000 0001
+                    int neg = atoi(arg2);
+                    
+                if (neg < 0) {
+                    unsigned int temp = neg;
+                        temp = temp << 16; 
+                        printf("neg = %i\n",temp);
+                        temp = temp >> 16; 
+                        printf("neg = %i\n",temp);
+                        result = (result << 16) | temp;
+                        printf("result = %i\n", result);
+                }
                 else {
-                    //2's complement
-                    //1111 1111 1111 1111 1000 0000 0000 0001
-                    if (atoi(arg2) < 0) {
-                        //shift left to remove first (31-16 bits)
-                        int neg = (atoi(arg2) << 16);
-                        //shift back right to create all 0's, 
-                        neg = neg >> 16;
                         result = (result << 16) | neg;
                         printf("result = %i\n", result);
-                    }               
-                    else {
-                        result = (result << 16) | atoi(arg2);
-                        printf("result = %i\n", result);
-                    }                   
                 }
+                                
             }    
         }
         else if (!strcmp(opcode, "jalr")) {
@@ -374,7 +360,7 @@ main(int argc, char *argv[])
             printf("current result: %i\n", result);
         
             //reg B - bits 18-16
-            result = (result << 3) | atoi(arg0);
+            result = (result << 3) | atoi(arg1);
             printf("current result: %i\n", result);
 
             //bits 15-0 are unused
@@ -399,7 +385,7 @@ main(int argc, char *argv[])
                 //label
                 if (arg0[0] > '9') {
                     int address = -1;
-                    for (int i = 0; i < MAXLINES; ++i){
+                    for (int i = 0; i < amountOfLabels; ++i){
                         if (!strcmp(maps[i].word,arg0)) {
                             printf("found label: %s at element: %i\n",arg0, i);
                             address = maps[i].ad;
@@ -418,7 +404,7 @@ main(int argc, char *argv[])
         
         }
         else {
-            printf("invalid opcode found");
+            printf("invalid opcode found\n");
             exit(1);
         }
 
