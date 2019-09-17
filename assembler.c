@@ -53,6 +53,11 @@ main(int argc, char *argv[])
     int currentAd = 0;      //never change the 0 address? so start at 1
     //first pass: find labels and store address
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
+        
+        //check size of offsetfield
+        if (atoi(arg2) < -32768 || atoi(arg2) > 32767) {
+            exit(1);
+        }
 
         if (label[0] != '\0') {
             //check size
@@ -99,11 +104,25 @@ main(int argc, char *argv[])
         beginning of the file */
     rewind(inFilePtr);
     int pc = 0;
+    int undefLabel = 1;
     //second pass - output ISA as decimal
     while (readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
         //the first 8 bits are always zeros
         int result;
         
+        
+        //check for undefined labels
+            for (int i = 0; i < amountOfLabels; ++i) {
+                if (!strcmp(maps[i].word,arg2)) {
+                    printf("found label: %s continuing ...\n",arg2);
+                    undefLabel = 0;
+                }
+            }
+
+            if (undefLabel) {
+                exit(1);
+            }
+
 
         //label
         //instruction
@@ -149,6 +168,7 @@ main(int argc, char *argv[])
             printf("current result: %i\n", result);
         }
         else if (!strcmp(opcode, "lw")) {
+            printf("label: %s, opcode: %s, arg0: %s, arg1: %s, arg2: %s\n", label,opcode,arg0,arg1,arg2);
             result = 0b010;
             printf("lw: %i\n",result);
 
@@ -345,7 +365,7 @@ main(int argc, char *argv[])
                 }
             }    
         }
-        else if (!strcmp(opcode, "jair")) {
+        else if (!strcmp(opcode, "jalr")) {
             result = 0b101;
             printf("jair: %i\n",result);
 
@@ -374,7 +394,7 @@ main(int argc, char *argv[])
             //bits 21-0 are unused
             result = result << 22;
         }
-        else {
+        else if (!strcmp(opcode, ".fill")) {
             if (arg0[0] != '\0') {
                 //label
                 if (arg0[0] > '9') {
@@ -396,6 +416,10 @@ main(int argc, char *argv[])
                 }
             }
         
+        }
+        else {
+            printf("invalid opcode found");
+            exit(1);
         }
 
         fprintf(outFilePtr,"%i\n",result);
