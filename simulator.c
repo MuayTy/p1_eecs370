@@ -64,44 +64,108 @@ main(int argc, char *argv[])
     }
 
         //init variables
+    int total_ran = 0;
     state.pc = 0;
-    state.reg = {0,0,0,0,0,0,0,0};
+    state.reg[0] = 0;
+    state.reg[1] = 0;
+    state.reg[2] = 0;
+    state.reg[3] = 0;
+    state.reg[4] = 0;
+    state.reg[5] = 0;
+    state.reg[6] = 0;
+    state.reg[7] = 0;
 
         //perform instructions
-    while (state.pc < state.numMemory) {
-        printState(state);
+    while (1) {
+        printState(&state);
+        unsigned int instruction = state.mem[state.pc];
+        int opcode = instruction >> 22;
 
-        int opcode = state.mem[state.pc] >> 21;
-
-        printf("opcode = %i",opcode);
+        printf("instruction = %i\n",instruction);
+        printf("opcode = %i\n",opcode);
 
         //check opcode
         if (opcode == ADD) {
             printf("performing add\n");
-            int regA = (state.mem[state.pc] << 10) >> 29;
-            int regB = (state.mem[state.pc] << 13) >> 29;
-            int dest = (state.mem[state.pc] << 29) >> 29;
+            //gather locations
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+            int dest = (instruction << 29) >> 29;
 
             //add contents of regA with contents of regB and store result in dest
             state.reg[dest] = state.reg[regA] + state.reg[regB];
         }
         else if (opcode == NOR) {
             printf("performing nor\n");
+            //gather locations
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+            int dest = (instruction << 29) >> 29;
+
+            //nor contents of regA with contents of regB and store result in dest
+            state.reg[dest] = ~(state.reg[regA] | state.reg[regB]);
         }
         else if (opcode == LW) {
             printf("performing lw\n");
+            //calculate mem address
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+            int offsetField = convertNum((instruction << 16) >> 16);
+            int address = state.reg[regA] + offsetField;
+            
+            //load regB with whatever was at calculated mem address
+            state.reg[regB] = state.mem[address];
+          
         }
         else if (opcode == SW) {
             printf("performing sw\n");
+            //calculate mem address
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+            int offsetField = convertNum((instruction << 16) >> 16);
+            int address = state.reg[regA] + offsetField;
+
+            //store regB to memory adress
+            state.mem[address] = state.reg[regB];
         }
         else if (opcode == BEQ) {
             printf("performing beq\n");
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+
+            //check contents of regA and regB
+            if (state.reg[regA] == state.reg[regB]) {
+
+                int offsetField = convertNum((instruction << 16) >> 16);
+
+                //the necessary +1 will be added at the end of interation
+                state.pc = state.pc + offsetField;
+
+            }
         }
         else if (opcode == JALR) {
             printf("performing jalr\n");
+            int regA = (instruction << 10) >> 29;
+            int regB = (instruction << 13) >> 29;
+
+            //first store pc + 1 into regB
+            state.reg[regB] = state.pc + 1;
+
+            //branch to the adress contain in regA
+            //-1 to compensate for pc increment later
+            state.pc = state.reg[regA] -1;
+
         }
         else if (opcode == HALT) {
-            printf("performing halt\n");
+            //maintain count before breaking loop
+            ++state.pc;
+            ++total_ran;
+
+            printf("machine halted\n");
+            printf("total of %i instructions executed\n",total_ran);
+            printf("final state of machine:\n");
+            printState(&state);
+            break;
         }
         else if (opcode == NOOP) {
             printf("performing noop\n");
@@ -111,6 +175,7 @@ main(int argc, char *argv[])
             exit(1);
         }
         ++state.pc;
+        ++total_ran;
     }
     
 
